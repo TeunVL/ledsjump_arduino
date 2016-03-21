@@ -20,8 +20,11 @@ int jumpMax = 2000;                     //sets the max time user can be in the a
 int ledWaveSpeed = 50;                  //speed of shockwave leds, high is slow, low is fast
 bool session = false;                   //is true when user has start jumping, is false when sessionTime is reached and last jump is made
 unsigned long previousSessionCounter = 0;
-const long sessionTime = 30000;          //sets the session time in mili-secs
-int waitTime = 5000;                    //sets the time after session to wait till next session can begin
+const long sessionTime = 10000;          //sets the session time in mili-secs
+int waitTime = 500;                    //sets the time after session to wait till next session can begin
+
+int ledIdleSpeed = 1000;                 //speed of leds switching when session is false
+unsigned long previousIdleCounter = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -59,7 +62,11 @@ void loop() {
     }
     else {
       session = false;
-      scoreLeds();
+    }
+
+    if(currentCounter - previousIdleCounter >= ledIdleSpeed){
+        previousIdleCounter = currentCounter;
+        idle();
     }
   }
 
@@ -71,7 +78,7 @@ void loop() {
     if (analogButtonRead < 200){presureState = LOW;}
     else {presureState = HIGH;}
   
-    if (presureState == HIGH && previousPresureState == LOW){
+    if (presureState == HIGH && previousPresureState == LOW || currentCounter - previousSessionCounter >= sessionTime + 3000){
       
       jumpTime = currentCounter - previousjumpTime;
       if (jumpTime > jumpMax){
@@ -82,6 +89,7 @@ void loop() {
       Serial.print(jumpTime);
       Serial.print(" total score: ");
       Serial.println(totalScore);
+      Serial.println(currentCounter);
       jumpScore = pow(jumpTime,2);
       totalScore = totalScore + jumpScore;
 
@@ -101,7 +109,6 @@ void loop() {
 }
 
 void jumpHitLeds(){
-//  digitalWrite(ledsPin[0],LOW);
   ledsOff();
   for (int i=0; i<5; i++){
     digitalWrite(ledsPin[i],HIGH);
@@ -149,11 +156,20 @@ void ledsOff(){
 void restartGame(){
   Serial.print("Je score = ");
   Serial.println(totalScore);
+  for (int i=0; i<7; i++){
+    scoreLeds();
+    delay(waitTime);
+    ledsOff();
+    delay(waitTime);
+    Serial.println("einde");
+  }
   jumpScore = 0;
   totalScore = 0;
-  delay(waitTime);
   session = false;
 
 }
 
+void idle(){
+        digitalWrite(ledsPin[0],HIGH);
+}
 
