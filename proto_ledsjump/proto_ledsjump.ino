@@ -14,21 +14,24 @@ int analogButtonRead;
 bool presureState = LOW;
 bool previousPresureState = LOW;
 
-unsigned long totalScore = 0;           //keeps score of all jumps together
-unsigned long jumpScore = 0;            //keeps score of 1 jump
-unsigned long jumpTime = 0;          //times how long user is in the air, in mili-sec
-unsigned long previousjumpTime = 0;
-int jumpMax = 2000;                     //sets the max time user can be in the air, in mili-sec
+float totalScore = 0;           //keeps score of all jumps together
+long jumpScore = 0;            //keeps score of 1 jump
+long jumpTime = 0;             //times how long user is in the air, in mili-sec
+long previousjumpTime = 0;
+int jumpMaxTime = 2000;                 //sets the max time user can be in the air, in mili-sec
+long totalScoreRecal = 0;      //totalScore recalculated on a scale from 0 to 1000
+long jumpScoreRecal = 0;
+float maxScore = 0;
 
 int ledWaveSpeed = 50;                  //speed of shockwave leds, high is slow, low is fast
 bool session = false;                   //is true when user has start jumping, is false when sessionTime is reached and last jump is made
 unsigned long previousSessionCounter = 0;
-const long sessionTime = 10000;          //sets the session time in mili-secs
-int waitTime = 500;                    //sets the time after session to wait till next session can begin
+const long sessionTime = 10000;         //sets the session time in mili-secs
+int waitTime = 500;                     //sets the time after session to wait till next session can begin
 
 int ledIdleSpeed = 1000;                 //speed of leds switching when session is false
-bool ledDirection = UP;
-int ledState = 0x01;
+bool ledDirection = UP;                  //defines if leds or moving up or down when idle
+int ledState = 0x01;                     //specifies which led turns on and of
 unsigned long previousIdleCounter = 0;
 
 void setup() {
@@ -39,8 +42,9 @@ void setup() {
 
   ledsOff();
 
-  int maxJumpTimes = sessionTime/jumpMax;
-  long maxScore = pow(jumpMax,2) * maxJumpTimes;
+  //specifies when the leds react at the score of the player
+  int maxJumpTimes = sessionTime/jumpMaxTime;
+  maxScore = pow(jumpMaxTime,2) * maxJumpTimes;
   long eightMaxScore = maxScore/8;
   ledsOneScore = 1 * eightMaxScore;
   ledsTwoScore = 3 * eightMaxScore;
@@ -54,7 +58,6 @@ void loop() {
   //waits for the user to make the first jump
   if (session == false){
     analogButtonRead = analogRead(analogButton);
-//    Serial.println(ledsOneScore);
     
     if (analogButtonRead < 200){presureState = LOW;}
     else {presureState = HIGH;}
@@ -78,7 +81,6 @@ void loop() {
   //start of the session
   else{ //if session == true
     analogButtonRead = analogRead(analogButton);
-//    Serial.println(jumpTime);
     
     if (analogButtonRead < 200){presureState = LOW;}
     else {presureState = HIGH;}
@@ -86,17 +88,18 @@ void loop() {
     if (presureState == HIGH && previousPresureState == LOW || currentCounter - previousSessionCounter >= sessionTime + 3000){
       
       jumpTime = currentCounter - previousjumpTime;
-      if (jumpTime > jumpMax){
-        jumpTime = jumpMax;
+      if (jumpTime > jumpMaxTime){
+        jumpTime = jumpMaxTime;
       }
       previousjumpTime = currentCounter;
+      
+      jumpScore = pow(jumpTime,2);
+      totalScore = totalScore + jumpScore;
+      totalScoreRecal = (totalScore/maxScore)*1000;
       Serial.print("Jump time: ");
       Serial.print(jumpTime);
       Serial.print(" total score: ");
-      Serial.println(totalScore);
-      Serial.println(currentCounter);
-      jumpScore = pow(jumpTime,2);
-      totalScore = totalScore + jumpScore;
+      Serial.println(totalScoreRecal);
 
       jumpHitLeds();
       scoreLeds();
@@ -159,14 +162,13 @@ void ledsOff(){
 }
 
 void restartGame(){
-  Serial.print("Je score = ");
-  Serial.println(totalScore);
+  Serial.print("Je eind score = ");
+  Serial.println(totalScoreRecal);
   for (int i=0; i<7; i++){
     scoreLeds();
     delay(waitTime);
     ledsOff();
     delay(waitTime);
-    Serial.println("einde");
   }
   jumpScore = 0;
   totalScore = 0;
@@ -175,6 +177,8 @@ void restartGame(){
 }
 
 void idle(){
+  // Set the pins of each LED during each iteration
+  // You'll only see something change when "LEDpins" gets updated
   for (int x=0; x < 4; x++)
     digitalWrite(ledsPin[x], bitRead(ledState,x));
     
@@ -189,7 +193,7 @@ void idle(){
       }
     }
     else {
-      // use "&gt;&gt;" to "bit-shift" all bits in LEDstate once to the right
+      // use ">>" to "bit-shift" all bits in LEDstate once to the right
       ledState = ledState >> 1;
       // This means we ran out of bits!
       if (ledState == 0x00) {
