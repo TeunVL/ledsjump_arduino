@@ -19,6 +19,8 @@ long jumpScore = 0;            //keeps score of 1 jump
 long jumpTime = 0;             //times how long user is in the air, in mili-sec
 long previousjumpTime = 0;
 int jumpMaxTime = 2000;                 //sets the max time user can be in the air, in mili-sec
+float maxJumpTimes = 0;
+float jumpMaxScore = 0;                 //calculates the max score you can get in one jump
 long totalScoreRecal = 0;      //totalScore recalculated on a scale from 0 to 1000
 long jumpScoreRecal = 0;
 float maxScore = 0;
@@ -26,10 +28,12 @@ float maxScore = 0;
 int ledWaveSpeed = 50;                  //speed of shockwave leds, high is slow, low is fast
 bool session = false;                   //is true when user has start jumping, is false when sessionTime is reached and last jump is made
 unsigned long previousSessionCounter = 0;
-const long sessionTime = 10000;         //sets the session time in mili-secs
+const long sessionTime = 30000;         //sets the session time in mili-secs
 int waitTime = 500;                     //sets the time after session to wait till next session can begin
 
-int ledIdleSpeed = 1000;                 //speed of leds switching when session is false
+int ledIdleSpeedSet = 1;
+int ledIdleSpeedPrimary = 1000;                 //first speed of leds switching when session is false
+int ledIdleSpeedSecondary = 100;                  //secondary speed of leds switching when session is false 
 bool ledDirection = UP;                  //defines if leds or moving up or down when idle
 int ledState = 0x01;                     //specifies which led turns on and of
 unsigned long previousIdleCounter = 0;
@@ -43,7 +47,8 @@ void setup() {
   ledsOff();
 
   //specifies when the leds react at the score of the player
-  int maxJumpTimes = sessionTime/jumpMaxTime;
+  jumpMaxScore = pow(jumpMaxTime,2);
+  maxJumpTimes = sessionTime/jumpMaxTime;
   maxScore = pow(jumpMaxTime,2) * maxJumpTimes;
   long eightMaxScore = maxScore/8;
   ledsOneScore = 1 * eightMaxScore;
@@ -72,10 +77,25 @@ void loop() {
       session = false;
     }
 
-    if (currentCounter - previousIdleCounter >= ledIdleSpeed) {
-      previousIdleCounter = currentCounter;
-      idle();
-    }
+    
+//    if (ledIdleSpeedSet == 1){
+//      for (int i=0; i <3; i++){
+        if (currentCounter - previousIdleCounter >= ledIdleSpeedPrimary) {
+          previousIdleCounter = currentCounter;
+          idle();
+        }
+//      }
+//      ledIdleSpeedSet = 2;
+//    }
+//    if (ledIdleSpeedSet == 2){
+//      for (int i=0; i <1; i++){
+//        if (currentCounter - previousIdleCounter >= ledIdleSpeedSecondary) {
+//          previousIdleCounter = currentCounter;
+//          idle();
+//        }
+//      }
+//      ledIdleSpeedSet = 1;
+//    }
   }
 
   //start of the session
@@ -94,10 +114,11 @@ void loop() {
       previousjumpTime = currentCounter;
       
       jumpScore = pow(jumpTime,2);
+      jumpScoreRecal = (jumpScore/jumpMaxScore)*(1000/maxJumpTimes);
       totalScore = totalScore + jumpScore;
       totalScoreRecal = (totalScore/maxScore)*1000;
-      Serial.print("Jump time: ");
-      Serial.print(jumpTime);
+      Serial.print("Jump score: ");
+      Serial.print(jumpScoreRecal);
       Serial.print(" total score: ");
       Serial.println(totalScoreRecal);
 
