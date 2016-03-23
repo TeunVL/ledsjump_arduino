@@ -1,3 +1,6 @@
+#define UP true
+#define DOWN false
+
 int ledsPin[] = {2,3,4,5};
 
 long ledsOneScore = 0;
@@ -24,6 +27,8 @@ const long sessionTime = 10000;          //sets the session time in mili-secs
 int waitTime = 500;                    //sets the time after session to wait till next session can begin
 
 int ledIdleSpeed = 1000;                 //speed of leds switching when session is false
+bool ledDirection = UP;
+int ledState = 0x01;
 unsigned long previousIdleCounter = 0;
 
 void setup() {
@@ -64,9 +69,9 @@ void loop() {
       session = false;
     }
 
-    if(currentCounter - previousIdleCounter >= ledIdleSpeed){
-        previousIdleCounter = currentCounter;
-        idle();
+    if (currentCounter - previousIdleCounter >= ledIdleSpeed) {
+      previousIdleCounter = currentCounter;
+      idle();
     }
   }
 
@@ -170,6 +175,28 @@ void restartGame(){
 }
 
 void idle(){
-        digitalWrite(ledsPin[0],HIGH);
+  for (int x=0; x < 4; x++)
+    digitalWrite(ledsPin[x], bitRead(ledState,x));
+    
+    if (ledDirection==UP) {
+      // Use "<<" to "bit-shift" everything to the left once
+      ledState = ledState << 1;
+      // 0x20 is the "last" LED, another shift makes the value 0x40
+      if (ledState == 0x08) {
+        // turn on the one before "0x20" and reverse direction
+        ledState = 0x08;
+        ledDirection = DOWN;
+      }
+    }
+    else {
+      // use "&gt;&gt;" to "bit-shift" all bits in LEDstate once to the right
+      ledState = ledState >> 1;
+      // This means we ran out of bits!
+      if (ledState == 0x00) {
+        // set one ahead so no extra delay
+        ledState = 0x02;
+        ledDirection = UP;
+      }
+    }
 }
 
