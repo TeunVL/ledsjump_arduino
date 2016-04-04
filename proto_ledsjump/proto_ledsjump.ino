@@ -1,6 +1,11 @@
+#include <Adafruit_NeoPixel.h>
+
 #define UP true
 #define DOWN false
+#define PIN 6
+#define NUMLEDS 144
 
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMLEDS, PIN, NEO_GRB + NEO_KHZ800);
 
 //pressure sensor
 int analogButton = A0;
@@ -8,10 +13,12 @@ int analogButtonRead;
 bool presureState = LOW;
 bool previousPresureState = LOW;
 
+long scoreLed = 0;
+
 float totalScore = 0;           //keeps score of all jumps together
 long jumpScore = 0;            //keeps score of 1 jump
 unsigned long jumpTime = 0;             //times how long user is in the air, in mili-sec
-unsigned long previousjumpTime = 0;
+unsigned long previousJumpTime = 0;
 int jumpMaxTime = 2000;                 //sets the max time user can be in the air, in mili-sec
 float maxJumpTimes = 0;
 float jumpMaxScore = 0;                 //calculates the max score you can get in one jump
@@ -26,9 +33,10 @@ int waitTime = 500;                     //sets the time after session to wait ti
 
 void setup() {
   Serial.begin(9600);
-  ledsOff();
+  strip.setBrightness(64);
+  strip.begin();
+  strip.show();
 
-  //specifies when the leds react at the score of the player
   jumpMaxScore = pow(jumpMaxTime,2);
   maxJumpTimes = sessionTime/jumpMaxTime;
   maxScore = pow(jumpMaxTime,2) * maxJumpTimes;
@@ -40,24 +48,21 @@ void loop() {
   //waits for the user to make the first jump
   if (session == false){
     analogButtonRead = analogRead(analogButton);
-    
+
     if (analogButtonRead < 200){presureState = LOW;}
     else {presureState = HIGH;}
   
     if (presureState == HIGH && previousPresureState == LOW){
-      jumpHitLeds();
+      jumpHitLeds(strip.Color(0, 0, 255), 0);
       previousSessionCounter = currentCounter;
       session = true;
-      previousjumpTime = currentCounter;
+      previousJumpTime = currentCounter;
     }
     else {
       session = false;
     }
-
-    if (currentCounter - previousIdleCounter >= ledIdleSpeedPrimary) {
-      previousIdleCounter = currentCounter;
-      idle();
-    }
+    
+  idle(10);
 
   }
 
@@ -70,22 +75,27 @@ void loop() {
   
     if (presureState == HIGH && previousPresureState == LOW || currentCounter - previousSessionCounter >= sessionTime + 3000){
       
-      jumpTime = currentCounter - previousjumpTime;
+      jumpTime = currentCounter - previousJumpTime;
       if (jumpTime > jumpMaxTime){
         jumpTime = jumpMaxTime;
       }
-      previousjumpTime = currentCounter;
+      previousJumpTime = currentCounter;
       
       jumpScore = pow(jumpTime,2);
       jumpScoreRecal = (jumpScore/jumpMaxScore)*(1000/maxJumpTimes);
       totalScore = totalScore + jumpScore;
       totalScoreRecal = (totalScore/maxScore)*1000;
+
+      scoreLed = (totalScore/maxScore)*NUMLEDS;
+      
       Serial.print("Jump score: ");
       Serial.print(jumpScoreRecal);
       Serial.print(" total score: ");
       Serial.println(totalScoreRecal);
+      
+      Serial.println(scoreLed);
 
-      jumpHitLeds();
+      jumpHitLeds(strip.Color(0, 0, 255), 0);
       
       if(currentCounter - previousSessionCounter >= sessionTime){
         restartGame();
@@ -99,25 +109,67 @@ void loop() {
   previousPresureState = presureState;
 }
 
-void jumpHitLeds(){
-
-}
-
-void ledsOff(){
-
+void jumpHitLeds(uint32_t c, uint8_t wait){
+  for(uint16_t i=0; i<strip.numPixels(); i++) {
+      if(totalScoreRecal < 250){
+        for(uint16_t x=0; x<scoreLed; x++){
+          strip.setPixelColor(x,0,255,0);
+        }
+      }
+      else if(totalScoreRecal < 500){
+        for(uint16_t x=0; x<scoreLed; x++){
+          strip.setPixelColor(x,0,255,0);
+        }
+      }
+      else if(totalScoreRecal < 750){
+        for(uint16_t x=0; x<scoreLed; x++){
+          strip.setPixelColor(x,0,255,0);
+        }
+      }
+      else {
+        for(uint16_t x=0; x<scoreLed; x++){
+          strip.setPixelColor(x,0,255,0);
+        }
+      }
+      strip.setPixelColor(i, c);
+      strip.setPixelColor(i-1, 0);
+      strip.show();
+  }
+  strip.setPixelColor(strip.numPixels()-1,0);
+  strip.show();
 }
 
 void restartGame(){
   Serial.print("Je eind score = ");
   Serial.println(totalScoreRecal);
-
+  jumpHitLeds(strip.Color(0, 0, 255), 0);
   jumpScore = 0;
   totalScore = 0;
   session = false;
 
 }
 
-void idle(){
+void idle(uint8_t wait) {
+//  uint16_t i, j;
+//
+//  for(j=0; j<256; j++) {
+//    for(i=0; i<strip.numPixels(); i++) {
+//      strip.setPixelColor(i, Wheel((i+j) & 255));
+//    }
+//    strip.show();
+//    delay(wait);
+//  }
+}
 
+uint32_t Wheel(byte WheelPos) {
+  if(WheelPos < 85) {
+   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  } else if(WheelPos < 170) {
+   WheelPos -= 85;
+   return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  } else {
+   WheelPos -= 170;
+   return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
 }
 
