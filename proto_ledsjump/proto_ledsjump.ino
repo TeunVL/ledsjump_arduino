@@ -92,8 +92,6 @@ void loop() {
       Serial.print(jumpScoreRecal);
       Serial.print(" total score: ");
       Serial.println(totalScoreRecal);
-      
-      Serial.println(scoreLed);
 
       jumpHitLeds(strip.Color(0, 0, 255), 0);
       
@@ -109,28 +107,33 @@ void loop() {
   previousPresureState = presureState;
 }
 
-void jumpHitLeds(uint32_t c, uint8_t wait){
-  for(uint16_t i=0; i<strip.numPixels(); i++) {
-      if(totalScoreRecal < 250){
+void showScore(){
+  if(totalScoreRecal < 250){
         for(uint16_t x=0; x<scoreLed; x++){
-          strip.setPixelColor(x,0,255,0);
+          strip.setPixelColor(x,255,0,0);
         }
       }
       else if(totalScoreRecal < 500){
         for(uint16_t x=0; x<scoreLed; x++){
-          strip.setPixelColor(x,0,255,0);
+          strip.setPixelColor(x,204,83,20);
         }
       }
       else if(totalScoreRecal < 750){
         for(uint16_t x=0; x<scoreLed; x++){
-          strip.setPixelColor(x,0,255,0);
+          strip.setPixelColor(x,59,255,0);
         }
       }
       else {
         for(uint16_t x=0; x<scoreLed; x++){
-          strip.setPixelColor(x,0,255,0);
-        }
-      }
+          strip.setPixelColor(x,55,178,18);
+        }  
+  }
+}
+
+void jumpHitLeds(uint32_t c, uint8_t wait){
+  for(uint16_t i=0; i<strip.numPixels(); i++) {
+      showScore();
+      strip.setPixelColor(i+1, c);
       strip.setPixelColor(i, c);
       strip.setPixelColor(i-1, 0);
       strip.show();
@@ -139,14 +142,30 @@ void jumpHitLeds(uint32_t c, uint8_t wait){
   strip.show();
 }
 
+void ledsOff(){
+  for(uint16_t i=0; i<strip.numPixels(); i++) {
+    strip.setPixelColor(i, 0);
+  }
+  strip.show();
+}
+
 void restartGame(){
   Serial.print("Je eind score = ");
   Serial.println(totalScoreRecal);
   jumpHitLeds(strip.Color(0, 0, 255), 0);
+
+  for(int i=0; i<7; i++){
+    ledsOff();
+    strip.show();
+    delay(waitTime);
+    showScore();
+    strip.show();
+    delay(waitTime);
+  }
+  
   jumpScore = 0;
   totalScore = 0;
   session = false;
-
 }
 
 void idle(uint8_t wait) {
